@@ -1,0 +1,9 @@
+---
+# tasks file for confbase
+
+
+- name: configurando o git
+  include: git.yaml
+
+
+

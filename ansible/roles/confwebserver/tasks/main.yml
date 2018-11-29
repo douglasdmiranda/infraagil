@@ -1,0 +1,9 @@
+---
+# tasks file for confwebserver
+
+
+- name: playbook de instalacao de pacotes
+  include: install.yaml
+
+- name: Config
+  include: config.yaml

@@ -1,0 +1,6 @@
+<marquee>
+<h1>
+HOSTNAME = {{ansible_hostname}}
+
+</h1>
+</marquee>

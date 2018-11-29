@@ -1,0 +1,12 @@
+- name: Instalando repositorio infraagil
+  hosts: docker
+  tasks:
+  - git_config:
+      name: core.editor
+      scope: global
+      value: vim
+      
+#  - git:
+#      repo: 'https://github.com/douglasdmiranda/infraagil.git'
+#      dest: /root/infraagil
+#      clone: yes

@@ -1,0 +1,19 @@
+
+- name: instalando pacotes para debian
+  package:
+   name:
+    - apache2
+    - htop
+    - vim
+    - sysstat
+    - cowsay
+  when: ansible_os_family == "Debian"
+
+- name: instalando pacotes para centos
+  package:
+   name:
+    - httpd
+    - epel-release
+    - vim
+    - sysstat
+  when: ansible_os_family == "RedHat"

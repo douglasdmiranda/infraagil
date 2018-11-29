@@ -1,0 +1,25 @@
+---
+
+- name: minha segunda play
+  hosts: all
+  tasks:
+   - name: install o epel-release
+     package:
+      name: epel-release
+     when: ansible_os_family == "RedHat"
+     register: pacote
+
+   - name: Verificando as opcoes dispoiveis
+     debug:
+      var: pacote     
+
+   - name: instalar pkgs basicos
+     package:
+      name: "{{item}}"
+     with_items:
+       - vim
+       - htop
+       - figlet
+       - cowsay
+     when: pacote.rc == 0
+     ignore_errors: yes

@@ -1,0 +1,4 @@
+- name: criando a infra puppet
+  hosts: all
+  roles:
+   - puppet

@@ -1,0 +1,16 @@
+# Ansible > 2.1
+- name: Setup default git configuraiton
+  git_config:
+    name="{{ item.name }}"
+    scope=global
+    value="{{ item.value }}"
+  with_items:
+    - {name: "user.name",  value: "douglasdmiranda" }
+    - {name: "user.email", value: "douglasdmiranda@gmail.com" }
+    - {name: "ui.color", value: "True" }
+
+- name: Instalando repositorio
+  git:
+    repo: 'https://github.com/douglasdmiranda/repo-infraagil.git'
+    dest: /root/repo-infraagil
+    clone: yes
