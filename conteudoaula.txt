@@ -941,4 +941,287 @@ http://192.168.33.150:8080/project/apagando%20diretorio
 
 
 
+########################################################### 30/11 #################################
+
+WORKFLOW - BLUEGREEN
+
+
+
+1. Instalar ansible no automation
+[root@automation ~]# yum install ansible
+
+ansible --version
+ansible 2.7.2
+
+ansible --version
+ansible 2.7.2
+
+2. Descomentar informações no ansible.cfg
+[root@automation ~]# cd /etc/ansible/
+vim ansible.cfg
+
+# additional paths to search for roles in, colon separated
+roles_path    = /etc/ansible/roles
+
+# uncomment this to disable SSH key host checking
+host_key_checking = False
+
+# default user to use for playbooks if user is not specified
+# (/usr/bin/ansible will use current user as default)
+remote_user = root
+
+# logging is off by default unless this path is defined
+# if so defined, consider logrotate
+log_path = /var/log/ansible.log
+
+3. Liberar user Jenkins
+[root@automation ansible]# vipw
+jenkins:x:997:994:Jenkins Automation Server:/var/lib/jenkins:/bin/bash
+
+
+4. Criar chave no user Jenkins e enviar para docker
+-bash-4.2$ ssh-keygen
+-bash-4.2$ ssh-copy-id root@docker.dexter.com.br
+
+
+5. Editar hosts do ansible (configurar inventario)
+a. apagar todas as linhas do arquivo "100dd"
+b. adicionar:
+[docker]
+docker.dexter.com.br
+
+
+6. Criar a role dentro do /etc/ansible/roles
+
+[root@automation ansible]# ansible-galaxy init pre-docker
+
+[root@automation ansible]# ansible-galaxy init pre-docker
+- pre-docker was created successfully
+[root@automation ansible]# ansible-galaxy init container-docker
+- container-docker was created successfully
+[root@automation ansible]# ansible-galaxy init deploy-bluegreen
+- deploy-bluegreen was created successfully
+
+
+7. Dentro do pre-docker tasks/main
+---
+# tasks file for pre-docker
+
+- name: garantindo os pacotes principais
+  package:
+   name:
+   - docker-ce
+   - nginx
+   - python-pip
+
+- name: instalando o docker-py
+  pip:
+   name: docker-py
+
+- name: garantindo servicos nginx e docker rodando
+  service:
+    name: "{{item}}"
+    state: started
+  with_items:
+    - nginx
+    - docker
+
+8. configurar container-docker/tasks/main
+---
+# tasks file for container-docker
+
+- name: Criando volumes do docker
+  docker_volume:
+   name: "{{item}}"
+   state: present
+  with_items:
+   - blue
+   - green
+
+- name: Criando o Container blue e green
+  docker_container:
+   name: "{{item}}"
+   image: httpd
+   state: started
+   volumes:
+     - "{{item}}:/usr/local/apache2/htdocs"
+  with_items:
+    - blue
+    - green
+
+9. configurar variaveis no deploy-bluegreen/vars/main (elas serão chamadas no /tasks/main)
+a. VARIAVEIS:
+# vars file for deploy-bluegreen
+
+jenkinsdir: /var/lib/jenkins/workspace
+dockerdir: /var/lib/docker/volumes
+
+b. TASKS
+---
+# tasks file for deploy-bluegreen
+- name: Verificando o container que esta no ar
+  stat:
+   path: /etc/nginx/sites-enabled/green.conf
+  register: vhost
+
+- name: copiando o site blue
+  copy:
+   src: "{{jenkinsdir}}/deploy/index.html"
+   dest: "{{dockerdir}}/blue/_data/index.html"
+  when: vhosts.stat.exists == True
+
+- name: Copiando o site green
+  copy:
+   src: "{{jenkinsdir}}/deploy/index.html"
+   dest: "{{dockerdir}}/green/_data/index.html"
+  when: vhosts.stat.exists == False
+
+- name: Pegando o ip do container green
+  shell: "docker exec green hostname -I"
+  register: ipgreen
+  when: vhost.stat.exists == False
+
+- name: Pegando o ip do container blue
+  shell: "docker exec blue hostname -I"
+  register: ipblue
+  when: vhost.stat.exists == True
+
+- name: criando vhost do green
+  template:
+   src: templates/vhosts_green
+   dest: /etc/nginx/sites-enabled/green.conf
+  when: vhost.stat.exists == False
+
+- name: apagando o ambiente green
+  template:
+   src: templates/vhost_blue
+   dest: /etc/nginx/sites-enabled/blue.conf
+  when: vhosts.stat.exists == True
+
+- name: apagando o ambiente blue
+  file:
+   path: /etc/nginx/sites-enabled/blue.conf
+   state: absent
+  when: vhost.stat.exists == False
+
+- name: realizando o restart no nginx
+  service:
+   name: nginx
+   state: restarted
+
+
+
+10. CRIAR AS PLAYBOOKS
+a. vim /etc/ansible/pre.yaml
+
+- name: executando a playbook de pre-requisitos
+  hosts: docker
+  roles:
+   - pre-docker
+
+
+b.  vim /etc/ansible/container.yaml
+
+- name: criando os volumes e os containers
+  hosts: docker
+  roles:
+   - container-docker
+
+
+c.  vim /etc/ansible/bluegreen.yaml
+
+- name: executando o deploy da aplicacao
+  hosts: docker
+  roles:
+   - deploy-bluegreen
+
+
+
+11. Executar playbooks com user Jenkins na seguinte ordem:
+
+a. pre
+    ansible-playbook /etc/ansible/pre.yaml
+b. container
+    ansible-playbook /etc/ansible/container.yaml
+
+
+12. acessar devops:
+a. parar apache
+b. rodar guitlab
+   gitlab-ctl status
+
+13. no gitlab criar projeto "bluegreen" e aquivo index.html
+<marquee>
+<h1>
+
+PROJETO V1.0
+
+</h1>
+<marquee>
+ 
+14: Acessar jenkins: 
+http://192.168.33.150:8080/
+
+
+15: Criar Jobs no Jenkins e webhook no gitlab
+a. Criar novo job pre_bluegreen (jenkins)
+c. Adicionar o projeto ao gitlab
+b. No Jenkins dentro do projeto selectionar em build "invoke ansible playbook"
+path: /etc/ansible/pre.yaml
+
+- Jenkins
+/etc/ansible/container.yaml (nao precisa colocar mais no git)
+
+- Jenkins
+Criar projeto "deploy"
+abilitar git no gerenciamento de codigo
+colocar a url: http://192.168.33.151/root/bluegreen.git
+Em Build: habilitar playbook e colocar o caminho:
+/etc/ansible/bluegreen.yaml
+
+- Jenkins ( criar  ação de pos build )
+Clicar na job pre-bluegreen
+container_bluegreen
+
+- Jenkins ( criar  ação de pos build )
+Clicar na container_bluegreen
+apontar para "deploy"
+
+
+16: Criar nova view no Jenks e 	Select Initial Job (pre_bluegreen)
+
+17. Criar template no ansible
+[root@automation ~]# vim /etc/ansible/roles/deploy-bluegreen/templates/vhost_blue
+
+a. vhost_blue
+server {
+        listen 80;
+        location / {proxy_pass http://{{ipblue.stdout}};
+        }
+}
+
+
+b. vhost_green
+server {
+        listen 80;
+        location / {proxy_pass http://{{ipgreen.stdout}};
+        }
+}
+
+
+18. Apagar arquivo antigo do nginx
+root@docker:/etc/nginx/sites-enabled# rm -rf docker.conf
+
+19. Acessar devops e clonar repo:
+git clone http://192.168.33.151/root/bluegreen.git
+
+obs: 
+Tive que alterar o nome "hosts" para "host" no caminho:
+[root@automation templates]# vim /etc/ansible/roles/deploy-bluegreen/tasks/main.yml
+
+
+
+  da AWS está no github do gabriel.
+
+github gpolicante
 
