@@ -1,0 +1,1293 @@
+<html lang="en">
+	<head>
+		<link rel="stylesheet" type="text/css" href="/static/dontpad-0.05.css" />
+		<meta http-equiv="Content-Type" content="text/html;charset=UTF-8" />
+		<title>dminfra | Dontpad</title>
+	</head>
+	<body>
+
+		<div id="noConnectionAlert" class="hide">
+			Not Connected. Trying every two seconds.
+		</div>
+			
+		<div id="menu-div">
+			<ul id="menu">				
+			</ul>
+		</div>
+
+		<div id="text-div" align="center">
+			<textarea id="text">=======================================26/11====================
+Note pass : Diurno
+InfraAgil
+Professor Gabriel
+linkedin gabriel policante
+
+Vagrant: Provedor de infra estrutura como codigo. Ex. Hostname, mem, cpu, setar ip e etc
+www.vagrantup.com
+
+Alta disponibilidade autocloud - video youtube
+
+https://github.com/gpolicante
+https://github.com/gpolicante/infraagil.git  (criar diretorio 525 e dar git clone)
+bitbucket.org/gpolicante
+
+dinamic inventory enseble (site)
+
+Rundeck concorrente do Jenkins
+
+Jmiter testar acessos
+
+
+Ansible gera a infra
+Puppet certifica que tudo foi feito corretamente: Ex. Senhas, aplicativos instalados e configs
+
+
+
+==== Vagrant ====
+https://github.com/gpolicante/infraagil.git  (criar diretorio 525 e dar git clone)
+vagrant init (cria workspace dentro do diretorio 525)
+vagrant up sobe o workspace (os servers) (Vagrantfile do exemplo faltava um "end")
+vagrant status
+vagrant box list
+
+Após instalado:
+    automation: SSH address: 127.0.0.1:2222
+    automation: SSH username: vagrant
+    automation: SSH auth method: private key
+vagrant status
+vagrant box list
+diurno@ada01:~/525/infraagil$ vagrant ssh automation
+
+ss -ntpl |grep 22
+
+Editar sshd_config para permitir root Login
+Liberar password yes
+hostnamectl set-hostname automation.dexter.com.br
+
+
+
+=== ANSIBLE ===
+Ferramenta para automação
+awx ferramenta grafica do ansible (tem no docker)
+tower é pago
+
+vagrant ssh devops
+apt update
+apt install software-properties-common -y
+apt-add-repository ppa:ansible/ansible
+apt update && apt install ansible -y
+
+DOCUMENTACAO
+ansible --version
+https://docs.ansible.com/ansible/latest/modules/modules_by_category.html
+
+CONFIGURAR ANSIBLE
+vim /etc/ansible/ansible.cfg
+roles_path    = /etc/ansible/roles
+
+SSH
+host_key_checking = False
+private_key_file = /etc/keys/devops.pem
+mkdir /etc/keys
+ssh-keygen devops.pem
+
+ssh-copy-id -i devops.pem.pub root@automation.dexter.com.br (mandar p/ outras tbm)
+ssh -i devops.pem automation.dexter.com.br (avaliar se chave funcionou)
+
+vim /etc/ansible/hosts (arquivo de inventario do ansible)
+
+ansible all -m command -a "echo sou devops &gt; /tmp/devops"
+ansible all -m command -a "touch /tmp/devops"
+ansible all -m shell -a "ls /tmp/ |grep devops"
+
+
+CRIAR YAML  ( Criar no diretorio /etc/ansible/playbooks )
+
+---
+
+- name: minha primeira playbook
+  hosts: all
+  tasks:
+    - name: gerenciando usuario devops
+      user: 
+       name: devops
+       state: present
+
+    - name: copiando arquivo para todas as maquinas
+      copy:
+       src: index
+       dest: /tmp/index
+
+=============== segunda yaml
+
+- name: minha segunda play
+  hosts: all
+  tasks:
+   - name: install o epel-release
+     package:
+      name: epel-release
+     when: ansible_os_family == "RedHat"
+     register: pacote
+
+   - name: Verificando as opcoes dispoiveis
+     debug:
+      var: pacote 
+
+   - name: instalar pkgs basicos
+     package:
+      name: "{{item}}"
+     with_items:
+       - vim
+       - htop
+       - figlet
+       - cowsay
+
+
+
+root@devops:/etc/ansible/playbooks# ansible-playbook primeiro.yaml 
+ansible-playbook -e "maquinas=docker,devops" primeiro.yaml
+ansible-playbook -e "maquinas=devops usuario=developer" primeiro.yaml
+ansible devops -m setup
+
+
+
+EXERCICIO:
+
+obs:   hosts: all Pega informações do inventario
+Para pegar o host da maquina
+ansible devops -m setup |grep -i hostname
+
+---
+
+- name: Exercicios
+  hosts: all
+  vars:
+   seunome: douglas
+  tasks:
+   - name: "{{usuario}}"
+     user:
+      name: "{{item}}"
+     with_items:
+      - "{{seunome}}"
+      - developer
+      - devops
+
+   - name: instalar pacotes
+     package:
+      name: 
+       - htop
+       - vim
+       - cowsay
+       - figlet
+
+   - name: copiando arquivo para todas as maquinas
+     file:
+      path: /tmp/devops
+      state: touch
+
+   - name: colocando conteudo
+     blockinfile:
+      path: /tmp/devops
+      block: |
+        sou devops
+        na 4linux
+
+   - name: copiando arquivo para todas as maquinas
+     file:
+       path: /tmp/index
+       state: touch
+     when: ansible_hostname == "devops"
+
+   - name: colocando conteudo
+     blockinfile:
+      path: /tmp/devops
+      block: |
+        sou devops
+     when: ansible_hostname == "devops"
+
+
+=================================== 27 /09 ================
+www.galaxy.annsible.com
+
+obs:   hosts: all Pega informações do inventario
+Para pegar o host da maquina
+ansible devops -m setup |grep -i hostname
+
+CRIAR ROLES
+root@devops:/etc/ansible/roles#
+ansible-galaxy init confbase (confbase é o nome da role)
+
+root@devops:/etc/ansible/roles/confbase/tasks# vim main.yaml 
+
+#######Conteudo do arquivo /tasks/main.yaml:
+---
+# tasks file for confbase
+
+- name: playbook de criacao de users
+  include: user.yaml
+
+- name: playbook de instalacao de pacotes
+  include: install.yaml
+
+- name: playbook de arquivos padroes
+  include: files.yaml
+
+
+####### Conteudo do /tasks/user.yaml
+- name: criando os users padroes para maquinas
+  user: 
+   name: "{{item.nome}}"
+   password: "{{item.senha}}"
+   state: "{{item.estado}}"
+   home: "{{item.casa}}"
+  with_items:
+    - { nome: douglas, senha: '$1$5aEcQCOH$sjCyGS39A0WnsDYZg3Wlj.', estado: present, casa: /srv/douglas }
+    - { nome: developer, senha: '$1$5aEcQCOH$sjCyGS39A0WnsDYZg3Wlj.', estado: present, casa: /srv/developer } 
+    - { nome: devops, senha: '$1$5aEcQCOH$sjCyGS39A0WnsDYZg3Wlj.', estado: present, casa: /srv/devops }
+
+
+
+######## Conteudo do install.yaml
+- name: instalando pacotes para debian
+  package:
+   name:
+    - htop
+    - vim
+    - sysstat
+    - cowsay
+  when: ansible_os_family == "Debian"
+
+- name: instalando pacotes para centos
+  package:
+   name:
+    - epel-release
+    - vim
+    - sysstat
+  when: ansible_os_family == "RedHat"
+
+###### Conteudo tasks/files.yaml
+- name: enviando arquivo sem variavel
+  copy:
+   src: files/padrao
+   dest: /tmp/padrao
+
+- name: enviando um arquivo template
+  template:
+   src: templates/config
+   dest: /tmp/config
+
+###### Conteudo confbase.yaml
+- name: minha primeira role
+   hosts: all
+   roles:
+    - confbase
+
+######## Conteudo do templates/config
+root@devops:/etc/ansible/roles/confbase/templates# cat config 
+
+USUARIO={{usuario}}
+HOST={{dominio}}
+SENHA={{senha}}
+
+
+######## Conteudo /vars/main.yaml
+
+root@devops:/etc/ansible/roles/confbase# cat vars/main.yml 
+---
+# vars file for confbase
+
+dominio: db.dexter.com.br
+usuario: userdb
+senha: 4linux
+
+
+EXERCICIO:
+Instalar server web com conteudo
+
+
+
+====================================== PUPPET
+Foreman interface grafica do puppet
+
+Buscar a versao do sistema
+ansible devos setup -m |
+
+######### Arquivo task/main.yaml
+
+---
+# tasks file for puppet
+
+- name: Instalando repositorio puppet
+  include: repo.yaml
+
+- name: instalando puppet
+  include: install.yaml
+
+
+###### arquivo install.yaml
+
+- name: instalando o PuppetServer na maquina devops
+  package:
+   name: puppetserver
+   update_cache: yes
+  when: ansible_hostname == "devops"
+
+- name: instalando o puppetagent
+  package:
+    name: puppet-agent
+    state: present
+    update_cache: yes
+
+- name: Start no puppt-agent no centos
+  service:
+   name: puppet
+   state: started
+  when: ansible_os_family == "RedHat"
+
+############# arquivo tasks/repo.yaml
+
+root@devops:/etc/ansible/roles/puppet/tasks# cat repo.yaml 
+- name: Instalando repositorio para centos7
+  yum:
+   name: https://yum.puppet.com/puppet5/puppet5-release-el-7.noarch.rpm
+   state: present
+  when: 
+   - ansible_os_family == "RedHat"
+   - ansible_distribution_major_version == "7"
+
+- name: Instalando para Debian 16
+  apt:
+   deb: https://apt.puppetlabs.com/puppet5-release-xenial.deb
+   state: present
+  when: 
+   - ansible_os_family == "Debian"
+   - ansible_distribution_major_version == "16"
+
+
+############# Criar playbook /playbook/puppet.yaml
+
+- name: criando a infra puppet
+  hosts: all
+  roles:
+   - puppet
+
+############## Alterar capacidade da maquina devops
+
+#### Depois do puppet instalado 
+
+** Sever usa porta 8140 (deve estar aberto no firewall para os agentes conectarem)
+
+Puppet usa 2GB
+Alterar Vagrant file dentro do 525/infraagil
+
+vagrant reload devops
+
+puppet resouce (comando para ver resorces)
+root@devops:~# puppet resource user root
+
+puppet resource user linus ensure=present
+
+puppet resource user linus ensure=absent
+
+puppet resource user --to_yaml (printa em yaml)
+
+puppet resource service
+
+puppet resource user
+
+puppet resource service puppetserver ensure=running
+
+facter 
+
+root@devops:~# vim /etc/default/puppetserver (customizar memoria do puppet. Alterar 
+JAVA_ARGS="-Xms2g -Xmx2g ) minimo 512
+
+######### Criar manifestos
+root@devops:~# cd /etc/puppetlabs/code/environments/
+root@devops:/etc/puppetlabs/code/environments#
+
+
+root@devops:/etc/puppetlabs/code/environments/production/manifests# vim site.pp
+
+exemplos:
+node "default" #todas as maquinas
+node /(devops|automation).dexter.com.br/ # range de maquinas
+node docker.dexter.com.br #unica maquina
+
+### Arquivo /modules/site.app
+node "default" {
+
+include config
+
+}
+
+2) root@devops:/etc/puppetlabs/code/environments/production/modules# pdk new module base (no ex1 foi config
+
+puppet resource package pdk ensure=present
+
+puppet resource package pdk ensure=present (se nao tiver)
+
+puppet config pring 
+
+pdk cria estrutura de diretorios (parecido com alsible-galaxy)
+
+https://forge.puppet.com/
+
+Criar manifesto
+root@devops:/etc/puppetlabs/code/environments/production/modules/config/manifests#
+
+vim init.pp
+
+### Criar agent (maquina docker)
+root@docker:~# puppet agent -t --server devops.dexter.com.br
+
+
+### No server
+puppet cert list
+
+puppet cert sign docker.dexter.com.br
+
+### Rodar novamente no client
+root@docker:~# puppet agent -t --server devops.dexter.com.br
+
+Para configurar autoasign para todas maquinas do dominio
+root@devops:/etc/puppetlabs/puppet# cat autosign.conf 
+*.dexter.com.br
+
+
+=== CRIAR NOVO node
+
+
+Configuração do novo init.app
+
+root@devops:/etc/puppetlabs/code/environments/production/modules/base/manifests# cat init.pp
+class base {
+
+case $::osfamily{
+	"RedHat": {
+		$pacotes = ["epel-release","git","vim","sysstat","cowsay","figlet"]
+		$web = "httpd"
+		
+	}
+	"Debian": {
+	
+		$pacotes = ["git","vim","sysstat","cowsay","figlet"]
+		$web = "apache2"
+		exec{"atualizando_pacotes":
+			command =&gt; "/usr/bin/apt update"
+		}
+	}	
+
+
+
+	}	
+package{$pacotes:
+	ensure =&gt; present
+	}
+
+user{"devops":
+	ensure =&gt; present
+}
+
+
+}
+
+========================================  28/11 ===================
+
+
+Exercicio:
+
+Manter conteudo de um site
+
+
+NO SERVER DEVOPS
+1. Puppet server está rodando?
+
+a) puppet resource service puppetserver
+b) puppet resource service puppetserver ensure=running
+
+
+2. Configurar site.pp para chamar modulo
+
+devops:/etc/puppetlabs/code/environments/production/manifests# cat site.pp 
+node "default" {
+
+include web
+
+}
+
+3. Criar novo module
+a) pdk new module web
+
+b) criar init.pp em: /etc/puppetlabs/code/environments/production/modules/web/manifests	
+	obs: ele terá as classes. (ex. tipo de SO e serviços)
+
+class web{
+
+        case $::osfamily {
+                
+                "Debian": {
+                        $apache = "apache2"
+                }
+                "RedHat": {
+                        $apache = "httpd"
+                }
+        }
+        package{$apache:
+                ensure =&gt; present
+        }
+        file{'/var/www/html/index.html':
+                source =&gt; "puppet:///modules/web/index",
+                ensure =&gt; present
+        }
+}
+
+
+4) Criar index com conteudo dentro do diretorio "file"
+
+a. root@devops:/etc/puppetlabs/code/environments/production/modules/web/files# vim index
+
+
+NO SERVER DOCKER
+
+5) Veriticar o runinterval = 60
+root@docker:~# cat /etc/puppetlabs/puppet/puppet.conf 
+[agent]
+server = devops.dexter.com.br
+environment = production
+runinterval = 60
+
+
+6) Logar no server docker e rodar comando
+a. root@docker:~# puppet agent -t
+
+
+#######################################   DOCKER ======
+
+traffic e kong (são proxys para docker)
+Olhar docker swarm
+docker swarm init
+mini cube
+www.dockerhub/gpolicante
+Olhar REGISTER
+
+1) Criar playbook no ansible para installar docker no ubuntu
+
+a. 
+root@devops:/etc/ansible/playbooks# cat docker.yaml 
+- name: Instalando docker
+  hosts: docker
+  tasks:
+   - name: download do 
+     shell: "curl -fsSL https://get.docker.com -o get-docker.sh"
+     
+   - name: Executando 
+     shell: "sh get-docker.sh"
+
+
+2) Verificar se docker está rodando 
+root@docker:~# puppet resource service docker
+service { 'docker':
+  ensure =&gt; 'running',
+  enable =&gt; 'true',
+}
+
+3) Executar o Container (vai fazer download se nao existir)
+
+a. 
+root@docker:~# docker container run --name primeiro debian
+
+create + start = run
+-- name = nome do container
+debian = imagem
+
+b. 
+docker run --name segundo debian /bin/ls /etc
+* nome do processo que mantem o container é entrypoint (no caso o ls)
+
+c. verificar container rodando  
+docker container ls 
+
+d. Parar só containers parados e todos
+docker rm $(docker ps -qa)
+docker rm -f $(docker ps -qa)
+
+e: acessar o container
+docker run -ti debian /bin/bash
+
+f: para conectar no container
+root@docker:~# docker attach tender_ganguly
+para sair sem fechar o container "ctrl + pq"
+root@e5a9a51409e2:/# read escape sequence
+
+docker exec -ti primeiro bash
+
+docker cp primeiro:/srv/devops .
+
+g: Iniciar container
+docker start primeiro
+
+===================== Administrar imagem
+- Donwload de Imagens
+ docker pull alpine
+
+- APAGA IMAGEM
+ docker rmi "imagem"
+
+- Criar imagem a partir do container
+a) docker commit primeiro htopdeb:v1
+
+b) docker export primeiro &gt; envio.tar
+
+c) cat envio.tar |docker import - novonome:v2
+
+
+====================== Docker File
+
+root@docker:~/dockerfile# cat Dockerfile 
+FROM debian
+RUN apt-get update
+RUN apt-get install vim htop -y
+COPY devops /srv/
+CMD /bin/bash
+
+CRIAR A IMAGEM (Nome deploy)
+docker build -t deploy .
+
+Roda e verificar conteudo dentro do container
+docker run deploy cat /srv/devops
+
+- Mapear diretorio externo para dentro do container
+docker run -ti --name segundo -v /srv/data:/data deploy
+
+Criar driver local gerenciado pelo docker
+root@docker:/srv/data# docker volume create --name backup
+docker volume ls
+
+Atrelar volume
+root@docker:/srv/data# docker run -ti --name volume-teste -v backup:/data deploy bash
+dentro do container criei arquivo voluminho
+
+root@docker:/var/lib/docker/volumes/backup/_data# cat voluminho
+
+- Roda container com detach e terminal interativo
+root@docker:~# docker run -dti --name volume-teste2 -v backup:/data deploy bash
+
+root@docker:~# docker exec volume-teste2 ls /data (vai criar outro container apontando tbm para data)
+voluminho
+
+=============================== NGINX
+root@docker:~# docker run -d --name nginxweb nginx
+
+# Traz o inventario da maquina
+root@docker:~# docker inspect nginxweb
+
+# Configurar Docker Proxy
+root@docker:~# docker run -d --name nginxweb1 -p 8080:80 nginx
+
+
+==========
+mudar host da maquina
+docker run -d --name nomedocontainer --hostname hostnamemaquina alpine
+
+
+# Mudar rede do docker
+docker network create --subnet 10.0.0.0/24 dexterlan
+
+root@docker:~# docker network ls
+NETWORK ID          NAME                DRIVER              SCOPE
+54a86d97e8e6        bridge              bridge              local
+7be7d899ba5e        dexterlan           bridge              local
+bf274d0550ec        host                host                local
+e96a2be7a077        none                null                local
+
+# Cria container na rede nova
+root@docker:~# docker run -dti --name node02 --net dexterlan debian
+
+# Configurar proxy reverso
+root@docker:~# systemctl stop apache2 && apt install nginx -y
+Criar volumes
+root@docker:~# docker volume create site1 e 2
+
+root@docker:~# docker run -d --name site1 -v site1:/usr/local/apache2/htdocs
+
+site1
+"IPAddress": "172.17.0.7",
+
+#Criar diretorio e criar um index.html
+root@docker:/etc/nginx/sites-enabled#
+server {
+        listen 80;
+        location / {proxy_pass http://172.17.0.8;}
+}
+
+
+
+root@docker:/etc/nginx/sites-enabled# cat docker.conf 
+upstream backend{
+	server 172.17.0.7;
+	server 172.17.0.8;
+}
+
+
+server {
+	listen 80;
+	location / {proxy_pass http://backend;}
+
+}
+
+
+================ CONFIGURAR WORLDPRESS COM COMPOSE
+*Instalar o docker compose antes
+
+## docker-compose.yaml
+wordpress_dexter:
+ image: wordpress
+ links:
+  - mysql_dexter:mysql
+ ports:
+  - 8081:80
+
+mysql_dexter:
+ image: mariadb
+ environment:
+  MYSQL_ROOT_PASSWORD: dexter
+
+
+=============== PORTAINER Administrador do Docker
+https://portainer.io/
+
+
+=============== CONTAINER DE DOCKER
+root@docker:~# docker swarm init --advertise-addr 192.168.33.152
+Swarm initialized: current node (z0qnmypjapw0z6tzy7xr9qtif) is now a manager.
+
+To add a worker to this swarm, run the following command:
+
+    docker swarm join --token SWMTKN-1-4wn0zonnrbk69rqdy10tr5c915cmisldotyv7pnzfn5y9ffmh1-88aon2ytcgkpwwxj4jq0n4a5y 192.168.33.152:2377
+
+To add a manager to this swarm, run 'docker swarm join-token manager' and follow the instructions.
+
+
+
+======================================== 29/11 - GIT  ==============
+
+git log --oneline
+
+export EDITOR=vim
+
+- listar branchs
+git branch
+
+- criar branch
+git checkout -b homolog
+
+- mudar de branch
+git checkout developer
+
+- Verificar diferença entre branchs
+git diff developer homolog
+
+- Para fazer merge (estando dentro da homolog)
+git merge developer
+
+git remote -v
+git remote add repo (tá repo, mas o usuado é origin) https://github.com/douglasdmiranda
+https://github.com/douglasdmiranda/525.git
+
+git clone -b master https://github.com/douglasdmiranda/repo-infraagil.git
+
+
+GITLAB (nao esquecer de mudar de git-lab cc para ce)
+curl https://packages.gitlab.com/install/repositories/gitlab/gitlab-ce/.deb.sh | sudo bash
+
+CONFIGURAR
+- acessar o seguinte arquivo e alterar a linha external
+root@devops:~# vim /etc/gitlab/gitlab.rb 
+
+external_url 'http:192.168.33.151
+
+(vai chamar o chef)
+gitlab-ctl reconfigure
+
+
+
+============================= RUNDECK (centOS)
+Para deploy continuo ou deploy delivery (quando precisa de permissão)
+
+
+1. Abrir vagrant file
+ vb.memory = "3196"
+
+criar 
+vim /etc/ansible/playbooks/rundeck.yaml
+
+- name: instalando o rundeck em centos
+  hosts: automation
+  tasks:
+   - name: Instalando repositorio do rundeck
+     yum:
+      name: http://repo.rundeck.org/latest.rpm
+      state: present
+
+   - name: instalar o Java e o Rundeck
+     package:
+      name: "{{item}}"
+     with_items:
+        - java
+        - rundeck
+
+- EDITAR
+[root@automation ~]# vim /etc/rundeck/framework.properties
+
+framework.server.name = automation.dexter.com.br
+framework.server.hostname = automation.dexter.com.br
+framework.server.port = 4440
+framework.server.url = http://192.168.33.150:4440
+
+- EDITAR
+[root@automation ~]# vim /etc/rundeck/rundeck-config.properties
+
+grails.serverURL=http://192.168.33.150:4440
+
+systemctl restart rundeckd
+
+ss -ntpl (verificar porta 4440)
+
+http://192.168.33.150:4440/
+
+pass e user:  root
+
+* Quando é instalado o Rundeck ele cria um user rundeck. 
+Se criar diretorios, precisa dar permissão
+
+- Criar novo projeto, adicionar node, marcar as opções de criação de arquivo.
+No exemplo, arq foi criado em /tmp/node
+
+-bash-4.2$ cat /tmp/nodes 
+devops.dexter.com.br:
+  nodename: devops.dexter.com.br
+  hostname: 192.168.33.151
+  osVersion: 3.10.0-862.14.4.el7.x86_64
+  osFamily: unix
+  osArch: amd64
+  deion: maquina escrava para execuções
+  osName: Linux
+  username: root
+  tags: ''
+
+
+docker.dexter.com.br
+  nodename: docker.dexter.com.br
+  hostname: 192.168.33.152
+  deion: maquina escrava docker
+  osName: Linux
+  username: root
+  tags: ''
+
+
+depois de configurado:
+[root@automation tmp]# su - rundeck
+-bash-4.2$ cd .ssh/
+-bash-4.2$ ls
+id_rsa  id_rsa.pub
+
+Rodar: vai enviar a chave da automation para a Devops e docker
+ -bash-4.2$ ssh-copy-id root@192.168.33.151
+
+ -bash-4.2$ ssh-copy-id root@192.168.33.152
+
+= CRIAR AS JOBS (pipeline) NO RUNDECK
+
+
+= Criar os steps com modo comando do rundeck:
+
+1. git clone http://192.168.33.151/root/site.git /tmp/site/
+2. systemctl start docker 
+3. docker run -d --name site -p 13:80 -v /tmp/site:/usr/local/apache2/htdocs httpd
+4. docker rm -f site || true
+5. curl 192.168.33.151:8029
+
+
+================================ JENKINS======
+
+- Criar playbook para install
+root@devops:~# vim /etc/ansible/playbooks/jenkins.yaml
+
+- name: instalando o Jenkins
+  hosts: automation
+  tasks:
+   - name: Adicionando chave do repositorio
+     shell: "wget -O /etc/yum.repos.d/jenkins.repo http://pkg.jenkins-ci.org/redhat/jenkins.repo"
+
+   - name: Install wget
+     package:
+      name: wget
+
+   - name: Adicionando a Chave
+     shell: "rpm --import https://jenkins-ci.org/redhat/jenkins-ci.org.key"
+
+   - name: Install Jenkins
+     package:
+      name: jenkins
+
+- Verificar porta no arquivo:
+[root@automation ~]# vim /etc/sysconfig/jenkins
+ 
+* se for container, dar um docker logs para ver a saida de logs e ver a senha do Jenkins
+
+modulo build pipe line
+
+WORKSPACE 
+    The absolute path of the directory assigned to the build as a workspace.
+
+USO: cp ${WORKSPACE}/index.html /tmp/infraagil/
+
+
+ - Habilitar no gitlab
+
+ Outbound requests
+
+Allow requests to the local network from hooks and services.
+Allow requests to the local network from hooks and services
+
+
+
+
+http://192.168.33.150:8080/project/apagando%20diretorio
+
+
+
+########################################################### 30/11 #################################
+
+WORKFLOW - BLUEGREEN
+
+
+
+1. Instalar ansible no automation
+[root@automation ~]# yum install ansible
+
+ansible --version
+ansible 2.7.2
+
+ansible --version
+ansible 2.7.2
+
+2. Descomentar informações no ansible.cfg
+[root@automation ~]# cd /etc/ansible/
+vim ansible.cfg
+
+# additional paths to search for roles in, colon separated
+roles_path    = /etc/ansible/roles
+
+# uncomment this to disable SSH key host checking
+host_key_checking = False
+
+# default user to use for playbooks if user is not specified
+# (/usr/bin/ansible will use current user as default)
+remote_user = root
+
+# logging is off by default unless this path is defined
+# if so defined, consider logrotate
+log_path = /var/log/ansible.log
+
+3. Liberar user Jenkins
+[root@automation ansible]# vipw
+jenkins:x:997:994:Jenkins Automation Server:/var/lib/jenkins:/bin/bash
+
+
+4. Criar chave no user Jenkins e enviar para docker
+-bash-4.2$ ssh-keygen
+-bash-4.2$ ssh-copy-id root@docker.dexter.com.br
+
+
+5. Editar hosts do ansible (configurar inventario)
+a. apagar todas as linhas do arquivo "100dd"
+b. adicionar:
+[docker]
+docker.dexter.com.br
+
+
+6. Criar a role dentro do /etc/ansible/roles
+
+[root@automation ansible]# ansible-galaxy init pre-docker
+
+[root@automation ansible]# ansible-galaxy init pre-docker
+- pre-docker was created successfully
+[root@automation ansible]# ansible-galaxy init container-docker
+- container-docker was created successfully
+[root@automation ansible]# ansible-galaxy init deploy-bluegreen
+- deploy-bluegreen was created successfully
+
+
+7. Dentro do pre-docker tasks/main
+---
+# tasks file for pre-docker
+
+- name: garantindo os pacotes principais
+  package:
+   name:
+   - docker-ce
+   - nginx
+   - python-pip
+
+- name: instalando o docker-py
+  pip:
+   name: docker-py
+
+- name: garantindo servicos nginx e docker rodando
+  service:
+    name: "{{item}}"
+    state: started
+  with_items:
+    - nginx
+    - docker
+
+8. configurar container-docker/tasks/main
+---
+# tasks file for container-docker
+
+- name: Criando volumes do docker
+  docker_volume:
+   name: "{{item}}"
+   state: present
+  with_items:
+   - blue
+   - green
+
+- name: Criando o Container blue e green
+  docker_container:
+   name: "{{item}}"
+   image: httpd
+   state: started
+   volumes:
+     - "{{item}}:/usr/local/apache2/htdocs"
+  with_items:
+    - blue
+    - green
+
+9. configurar variaveis no deploy-bluegreen/vars/main (elas serão chamadas no /tasks/main)
+a. VARIAVEIS:
+# vars file for deploy-bluegreen
+
+jenkinsdir: /var/lib/jenkins/workspace
+dockerdir: /var/lib/docker/volumes
+
+b. TASKS
+---
+# tasks file for deploy-bluegreen
+- name: Verificando o container que esta no ar
+  stat:
+   path: /etc/nginx/sites-enabled/green.conf
+  register: vhost
+
+- name: copiando o site blue
+  copy:
+   src: "{{jenkinsdir}}/deploy/index.html"
+   dest: "{{dockerdir}}/blue/_data/index.html"
+  when: vhosts.stat.exists == True
+
+- name: Copiando o site green
+  copy:
+   src: "{{jenkinsdir}}/deploy/index.html"
+   dest: "{{dockerdir}}/green/_data/index.html"
+  when: vhosts.stat.exists == False
+
+- name: Pegando o ip do container green
+  shell: "docker exec green hostname -I"
+  register: ipgreen
+  when: vhost.stat.exists == False
+
+- name: Pegando o ip do container blue
+  shell: "docker exec blue hostname -I"
+  register: ipblue
+  when: vhost.stat.exists == True
+
+- name: criando vhost do green
+  template:
+   src: templates/vhosts_green
+   dest: /etc/nginx/sites-enabled/green.conf
+  when: vhost.stat.exists == False
+
+- name: apagando o ambiente green
+  template:
+   src: templates/vhost_blue
+   dest: /etc/nginx/sites-enabled/blue.conf
+  when: vhosts.stat.exists == True
+
+- name: apagando o ambiente blue
+  file:
+   path: /etc/nginx/sites-enabled/blue.conf
+   state: absent
+  when: vhost.stat.exists == False
+
+- name: realizando o restart no nginx
+  service:
+   name: nginx
+   state: restarted
+
+
+
+10. CRIAR AS PLAYBOOKS
+a. vim /etc/ansible/pre.yaml
+
+- name: executando a playbook de pre-requisitos
+  hosts: docker
+  roles:
+   - pre-docker
+
+
+b.  vim /etc/ansible/container.yaml
+
+- name: criando os volumes e os containers
+  hosts: docker
+  roles:
+   - container-docker
+
+
+c.  vim /etc/ansible/bluegreen.yaml
+
+- name: executando o deploy da aplicacao
+  hosts: docker
+  roles:
+   - deploy-bluegreen
+
+
+
+11. Executar playbooks com user Jenkins na seguinte ordem:
+
+a. pre
+    ansible-playbook /etc/ansible/pre.yaml
+b. container
+    ansible-playbook /etc/ansible/container.yaml
+
+
+12. acessar devops:
+a. parar apache
+b. rodar guitlab
+   gitlab-ctl status
+
+13. no gitlab criar projeto "bluegreen" e aquivo index.html
+&lt;marquee&gt;
+&lt;h1&gt;
+
+PROJETO V1.0
+
+&lt;/h1&gt;
+&lt;marquee&gt;
+ 
+14: Acessar jenkins: 
+http://192.168.33.150:8080/
+
+
+15: Criar Jobs no Jenkins e webhook no gitlab
+a. Criar novo job pre_bluegreen (jenkins)
+c. Adicionar o projeto ao gitlab
+b. No Jenkins dentro do projeto selectionar em build "invoke ansible playbook"
+path: /etc/ansible/pre.yaml
+
+- Jenkins
+/etc/ansible/container.yaml (nao precisa colocar mais no git)
+
+- Jenkins
+Criar projeto "deploy"
+abilitar git no gerenciamento de codigo
+colocar a url: http://192.168.33.151/root/bluegreen.git
+Em Build: habilitar playbook e colocar o caminho:
+/etc/ansible/bluegreen.yaml
+
+- Jenkins ( criar  ação de pos build )
+Clicar na job pre-bluegreen
+container_bluegreen
+
+- Jenkins ( criar  ação de pos build )
+Clicar na container_bluegreen
+apontar para "deploy"
+
+
+16: Criar nova view no Jenks e 	Select Initial Job (pre_bluegreen)
+
+17. Criar template no ansible
+[root@automation ~]# vim /etc/ansible/roles/deploy-bluegreen/templates/vhost_blue
+
+a. vhost_blue
+server {
+        listen 80;
+        location / {proxy_pass http://{{ipblue.stdout}};
+        }
+}
+
+
+b. vhost_green
+server {
+        listen 80;
+        location / {proxy_pass http://{{ipgreen.stdout}};
+        }
+}
+
+
+18. Apagar arquivo antigo do nginx
+root@docker:/etc/nginx/sites-enabled# rm -rf docker.conf
+
+19. Acessar devops e clonar repo:
+git clone http://192.168.33.151/root/bluegreen.git
+
+obs: 
+Tive que alterar o nome "hosts" para "host" no caminho:
+[root@automation templates]# vim /etc/ansible/roles/deploy-bluegreen/tasks/main.yml
+
+
+
+  da AWS está no github do gabriel.
+
+github gpolicante
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</textarea>
+		</div>
+		
+		<input type="hidden" name="lastUpdate" id="lastUpdate" value="1543604400000"/>
+		<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+		<script type="text/javascript" src="/static/dontpad-0.07.js" charset="UTF-8"></script>
+		<script type="text/javascript">
+		  var _gaq = _gaq || [];
+		  _gaq.push(['_setAccount', 'UA-23517037-1']);
+		  _gaq.push(['_trackPageview']);
+		  (function() {
+		    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+		    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+		    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+		  })();
+		</script>
+	</body>
+</html>
