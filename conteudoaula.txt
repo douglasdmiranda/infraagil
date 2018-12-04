@@ -946,9 +946,25 @@ http://192.168.33.150:8080/project/apagando%20diretorio
 WORKFLOW - BLUEGREEN
 
 
-
 1. Instalar ansible no automation
 [root@automation ~]# yum install ansible
+
+yum install epel-release
+yum -y update
+yum -y install ansible
+
+To administer your Windows servers, you will need to install the following packages:
+python-pip
+pip
+pywinrm
+
+Install the Python packages.
+
+yum -y install python-pip pip
+Install WinRM (Windows Remote Management).
+
+pip install pywinrm
+
 
 ansible --version
 ansible 2.7.2
