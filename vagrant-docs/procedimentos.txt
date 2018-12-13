@@ -1,5 +1,21 @@
 
-NA MAQUINA CLIENTE
+
+
+This worked for me... run the following:
+
+vagrant plugin repair
+Then
+
+vagrant plugin expunge --reinstall
+Then
+
+vagrant reload
+
+vagrant plugin install vagrant-vbguest
+vagrant vbguest
+vagrant plugin install vagrant-winnfsd (se for win acho)
+
+########### NA MAQUINA CLIENTE #####################
 1. Criar user vagrant com senha vagrant
 useradd vagrant
 passwd vagrant
