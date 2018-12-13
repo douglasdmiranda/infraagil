@@ -27,7 +27,11 @@ dmiranda:vagrant dmiranda$ vagrant package --base e0cbe495-2b61-48a6-ab28-a94f94
 
 4. And add it to the list of your local Vagrant boxes:
 
-$ vagrant box add docker.box --name docker
+dmiranda:vagrant dmiranda$ vagrant box add docker.box --name docker
+==> box: Box file was not detected as metadata. Adding it directly...
+==> box: Adding box 'docker' (v0) for provider: 
+    box: Unpacking necessary files from: file:///Users/dmiranda/vagrant/docker.box
+==> box: Successfully added box 'docker' (v0) for 'virtualbox'!
 
 
 5. Finally, you can create a Vagrantfile to use this box:

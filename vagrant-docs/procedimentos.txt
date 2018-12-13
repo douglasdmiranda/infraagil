@@ -59,6 +59,10 @@ IPV6_FAILURE_FATAL="no"
 #DNS2=201.6.2.17                # DNS Secundario
 #BOOTPROTO="static"
 
+5. Copiar a chave privada
+a. sudo cp /Users/vagrant/.ssh/id_rsa /Users/dmiranda/vagrant/.vagrant/machines/docker/virtualbox/private_key
+
+b. sudo chown dmiranda:staff /Users/dmiranda/vagrant/.vagrant/machines/docker/virtualbox/private_key
  
 4. Mudar para user vagrant e no Home do user criar diretorio .ssh
 [root@docker ~]# su - vagrant
