@@ -21,13 +21,13 @@ $ VBoxManage list vms
 
 dmiranda:vagrant dmiranda$ vagrant package --base e0cbe495-2b61-48a6-ab28-a94f94f55b78 --output docker.box                                                                                                 
 ==> e0cbe495-2b61-48a6-ab28-a94f94f55b78: Exporting VM...                                                                                                                                                
-==> acef4c0a-35be-4640-a214-be135417f04d: Compressing package to: /home/crohr/dev/ucs/UCS.box   
+==> e0cbe495-2b61-48a6-ab28-a94f94f55b78: Compressing package to: /Users/dmiranda/vagrant/docker.box
 
 
 
 4. And add it to the list of your local Vagrant boxes:
 
-$ vagrant box add UCS.box --name UCS
+$ vagrant box add docker.box --name docker
 
 
 5. Finally, you can create a Vagrantfile to use this box:
