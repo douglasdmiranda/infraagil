@@ -19,8 +19,8 @@ $ VBoxManage list vms
 
 3. You can now package that VM as a Vagrant box:
 
-$ vagrant package --base acef4c0a-35be-4640-a214-be135417f04d --output UCS.box                                                                                                                             
-==> acef4c0a-35be-4640-a214-be135417f04d: Exporting VM...                                                                                                                                                
+dmiranda:vagrant dmiranda$ vagrant package --base e0cbe495-2b61-48a6-ab28-a94f94f55b78 --output docker.box                                                                                                 
+==> e0cbe495-2b61-48a6-ab28-a94f94f55b78: Exporting VM...                                                                                                                                                
 ==> acef4c0a-35be-4640-a214-be135417f04d: Compressing package to: /home/crohr/dev/ucs/UCS.box   
 
 
