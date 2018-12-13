@@ -1,0 +1,13 @@
+
+NA MAQUINA CLIENTE
+1. Criar user vagrant com senha vagrant
+useradd vagrant
+Passwd vagrant
+
+
+2. Adicionar ao grupo wheel e Vagrant
+usermod -aG wheel vagrant
+usermod -aG vagrant vagrant
+
+
+3. No Home do Vagrant criar diretorio .ssh
