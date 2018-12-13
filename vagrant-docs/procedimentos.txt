@@ -2,12 +2,89 @@
 NA MAQUINA CLIENTE
 1. Criar user vagrant com senha vagrant
 useradd vagrant
-Passwd vagrant
+passwd vagrant
 
 
 2. Adicionar ao grupo wheel e Vagrant
 usermod -aG wheel vagrant
 usermod -aG vagrant vagrant
+[root@docker ~]# usermod -aG vagrant vagrant
+
+3. Abrir aquivo sudoers e deixar habilitadas as seguintes tags:
+
+%wheel  ALL=(ALL)       ALL
+
+%wheel  ALL=(ALL)       NOPASSWD: ALL
+
+4. Certificar que o arquivo ifcfg-enp0s3 está conforme abaixo:
+vim /etc/sysconfig/network-scripts/ifcfg-enp0s3
+
+NAME="enp0s3"
+DEVICE="enp0s3"
+ONBOOT="yes"            # Adpatador rede ficar ativado
+NETBOOT="yes"
+UUID="f3f85656-52b3-40dc-846a-a60c2be98b40"
+IPV6INIT="yes"
+BOOTPROTO="dhcp"
+TYPE="Ethernet"
+PROXY_METHOD="none"
+BROWSER_ONLY="no"
+DEFROUTE="yes"
+#PEERDNS="yes"
+#PEERROUTES="yes"
+IPV4_FAILURE_FATAL="no"
+IPV6_AUTOCONF="yes"
+IPV6_DEFROUTE="yes"
+IPV6_FAILURE_FATAL="no"
+#IPADDR=192.168.0.25    # Endereço de Ip
+#NETMASK=255.255.255.0  # Mascara de Rede
+#GATEWAY=192.168.0.1    # Gateway da Rede
+#DNS1=201.6.2.104        # DNS Principal
+#DNS2=201.6.2.17                # DNS Secundario
+#BOOTPROTO="static"
+
+ 
+4. Mudar para user vagrant e no Home do user criar diretorio .ssh
+[root@docker ~]# su - vagrant
+[vagrant@docker ~]$ mkdir .ssh
+[vagrant@docker ~]$ chmod 700 .ssh
 
 
-3. No Home do Vagrant criar diretorio .ssh
+5. Na maquina Host (mac) mudar para user vagrant e copiar chave para maquina remota:
+
+a) dmiranda:~ dmiranda$ ssh-copy-id vagrant@192.168.0.35
+
+b) dmiranda:~ dmiranda$ sudo su - vagrant
+
+c) ssh-copy-id vagrant@192.168.0.35
+
+*Será criado um arquivo authorized_keys dentro do .ssh na maquina remota
+
+
+6. Ir ao diretorio onde sera iniciada a imagem e criar/adicionar ao arquivo "Vagrant"
+
+
+Vagrant.configure("2") do |config|
+config.vm.define "docker" do |config|
+                config.vm.box = "centos/7"
+
+                # config.vm.define "default" do |config|
+                #   config.vm.box = "geerlingguy/centos7"
+
+                config.vm.network "private_network", ip: "192.168.1.35"
+                config.vm.hostname = "automation.douglasdmiranda.com"
+                config.vm.provider "virtualbox" do |vb|
+                vb.memory = "1024"
+        end
+
+        config.vm.provision "shell", inline: <<-SHELL
+                echo "192.168.1.35 automation.douglasdmiranda.com "  >>  /etc/hosts
+                SHELL
+        end
+end
+
+7. rodar o comando "vagrant up"
+
+
+
+
