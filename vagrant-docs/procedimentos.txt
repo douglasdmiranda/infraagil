@@ -72,16 +72,19 @@ config.vm.define "docker" do |config|
                 #   config.vm.box = "geerlingguy/centos7"
 
                 config.vm.network "private_network", ip: "192.168.1.35"
-                config.vm.hostname = "automation.douglasdmiranda.com"
+                config.vm.hostname = "docker.douglasdmiranda.com"
                 config.vm.provider "virtualbox" do |vb|
                 vb.memory = "1024"
         end
 
         config.vm.provision "shell", inline: <<-SHELL
-                echo "192.168.1.35 automation.douglasdmiranda.com "  >>  /etc/hosts
+                echo "192.168.1.35 docker.douglasdmiranda.com "  >>  /etc/hosts
                 SHELL
         end
 end
+
+
+
 
 7. rodar o comando "vagrant up"
 
