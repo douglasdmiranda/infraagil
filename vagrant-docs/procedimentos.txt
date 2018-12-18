@@ -26,6 +26,9 @@ usermod -aG wheel vagrant
 usermod -aG vagrant vagrant
 [root@docker ~]# usermod -aG vagrant vagrant
 
+usermod -aG wheel vagrant && usermod -aG vagrant vagrant
+
+
 3. Abrir aquivo sudoers e deixar habilitadas as seguintes tags:
 
 %wheel  ALL=(ALL)       ALL
@@ -104,6 +107,7 @@ config.vm.define "docker" do |config|
 end
 
 
+OBS: No Debian é preciso entrar em /etc/network/interface para verificar como está a interface
 
 
 7. rodar o comando "vagrant up"
